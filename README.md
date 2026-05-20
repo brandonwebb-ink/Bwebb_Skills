@@ -19,7 +19,3 @@ robocopy "$env:USERPROFILE\Bwebb_Skills\<SkillName>" `
 ```
 
 Restart Cursor or open a fresh chat and the skill is discoverable.
-
-## License
-
-MIT. See [LICENSE](LICENSE).
