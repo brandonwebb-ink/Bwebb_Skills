@@ -9,7 +9,7 @@ Designed for the case where a workstation is going to be wiped, but persistent
 network drives (`H:`, `N:`, etc.) survive. The skill copies only C-drive data
 and ignores everything Cursor has open on persistent drives.
 
-## What it captures
+## What it captures -
 
 - Cursor user state: `%USERPROFILE%\.cursor`, `%APPDATA%\Cursor`
 - VS Code user state: `%APPDATA%\Code` (if present)
