@@ -16,19 +16,62 @@ Use this skill to snapshot every C-drive thing the user cares about into a times
 
 ## Procedure
 
-1. Tell the user to close all other Cursor windows. The one running this skill keeps running; robocopy retries handle the locked transcript file for the active chat.
-2. Confirm `H:\WorkStationXfer` exists.
-3. Run the worker script. It does discovery, copy, and manifest write in one pass:
+Follow these steps in order. Do not improvise pre-checks; the script handles its own validation.
+
+### 1. Tell the user to close all other Cursor windows
+
+The Cursor window running this skill keeps running; robocopy retries handle the locked transcript file for the active chat.
+
+### 2. Confirm `H:\WorkStationXfer` exists
 
 ```powershell
-pwsh -NoProfile -File "$env:USERPROFILE\.cursor\skills\PrepareMigration\scripts\Invoke-PrepareMigration.ps1"
+Test-Path 'H:\WorkStationXfer'
 ```
 
-If `pwsh` is unavailable, use `powershell.exe` instead.
+If this is `False`, stop and report. The script will not create the parent.
 
-4. The script prints `MIGRATION_SNAPSHOT_READY: <snapshot_path>` on success and lists any item with robocopy exit code >= 8. Report that summary back to the user.
+### 3. Locate `Invoke-PrepareMigration.ps1`
 
-5. If any item failed (exit code >= 8), surface the failing source paths and ask the user whether to retry just those items or proceed. Do not silently ignore failures.
+The script ships beside this `SKILL.md`. Resolve its absolute path using the FIRST option that succeeds:
+
+1. **Use this SKILL.md's own folder.** You already have the absolute path to this file from your skill index. The script is at `<that folder>\scripts\Invoke-PrepareMigration.ps1`.
+2. Else check, in order:
+   - `$env:USERPROFILE\.cursor\skills\PrepareMigration\scripts\Invoke-PrepareMigration.ps1` (standard install)
+   - `H:\WorkStationXfer\skills\PrepareMigration\scripts\Invoke-PrepareMigration.ps1` (mirrored copy on H:)
+   - `$env:USERPROFILE\Bwebb_Skills\PrepareMigration\scripts\Invoke-PrepareMigration.ps1` (repo clone in user home)
+   - Any path matching `*\Bwebb_Skills\PrepareMigration\scripts\Invoke-PrepareMigration.ps1` under the current workspace
+
+If none of those exist, the skill isn't installed yet. Run the repo-root installer (`<repo>\install.ps1`) or copy `PrepareMigration\` into `%USERPROFILE%\.cursor\skills\` before continuing.
+
+### 4. Invoke the script directly with `-File` and a literal path
+
+Once you have the absolute path, run it like this — substitute the actual path for the placeholder:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File 'C:\absolute\path\to\Invoke-PrepareMigration.ps1'
+```
+
+`pwsh` (PowerShell 7) works equivalently if it's on PATH; the script is written against PowerShell 5.1 so `powershell.exe` is the safer default on a stock Windows machine.
+
+**Do not** wrap this in any of the following antipatterns. Each one has bitten previous agent runs:
+
+- `powershell -Command "$script = '...'; & $script"` — the outer shell can interpolate `$script` to empty before the inner shell sees it, and PowerShell reserves the `script:` scope qualifier. The script never runs.
+- Building the path inside nested heredocs or interpolated strings across shells. Pass the path as ONE single-quoted literal after `-File`. Do not introduce a helper variable for the path.
+- Do not use `Invoke-Expression` or `iex`. Always `-File '<absolute path>'`.
+
+To pass optional flags (e.g. `-SkipVenv` or `-ExtraIncludePaths`), append them after `-File '<path>'`:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File 'C:\absolute\path\to\Invoke-PrepareMigration.ps1' -SkipVenv
+```
+
+### 5. Read back the result
+
+The script prints `MIGRATION_SNAPSHOT_READY: <snapshot_path>` on success and lists any item with robocopy exit code >= 8. Report that summary verbatim to the user.
+
+### 6. Handle failures explicitly
+
+If any item failed (exit code >= 16), surface the failing source paths and ask the user whether to retry just those items or proceed. Exit codes 8-15 are usually locked-file partials and can typically be ignored; still mention them so the user can decide.
 
 ## What The Script Does
 

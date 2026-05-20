@@ -27,17 +27,26 @@ excluded.
 
 ## Install
 
-Personal skill (current user only):
+Recommended: use the repo-root installer.
 
 ```powershell
 git clone https://github.com/<owner>/Bwebb_Skills "$env:USERPROFILE\Bwebb_Skills"
-robocopy "$env:USERPROFILE\Bwebb_Skills\PrepareMigration" `
-         "$env:USERPROFILE\.cursor\skills\PrepareMigration" `
-         /E /COPY:DAT /R:2 /W:2
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File "$env:USERPROFILE\Bwebb_Skills\install.ps1" -Skills PrepareMigration
 ```
 
-Or copy the `PrepareMigration\` folder directly into
-`%USERPROFILE%\.cursor\skills\`.
+`install.ps1` is self-locating — it figures out the repo root via
+`$PSScriptRoot` and robocopies skill folders into
+`%USERPROFILE%\.cursor\skills\<SkillName>\`. No `/MIR`, no `/MOVE`; sources
+are never modified.
+
+Manual install (equivalent):
+
+```powershell
+robocopy "$env:USERPROFILE\Bwebb_Skills\PrepareMigration" `
+         "$env:USERPROFILE\.cursor\skills\PrepareMigration" `
+         /E /COPY:DAT /XJ /R:2 /W:2
+```
 
 Restart Cursor (or open a fresh chat) and the skill will be discoverable by
 name.
@@ -57,12 +66,19 @@ The agent invokes `scripts\Invoke-PrepareMigration.ps1`. Flags it supports:
 | `-SkipVenv` | Skip `.venv` and `.cache` directories. |
 | `-DryRun` | Plan only, no copy. Writes a manifest with `dry_run: true`. |
 
-Direct invocation:
+Direct invocation. Always pass an absolute path to `-File` as a single-quoted
+literal (or a double-quoted string with no embedded variables that an outer
+shell could interpolate). Do **not** wrap the call in
+`pwsh -Command "$script = '...'; & $script"` — outer-shell interpolation can
+empty the variable before PowerShell sees it.
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
+pwsh -NoProfile -ExecutionPolicy Bypass `
   -File "$env:USERPROFILE\.cursor\skills\PrepareMigration\scripts\Invoke-PrepareMigration.ps1"
 ```
+
+If `pwsh` is unavailable, substitute `powershell.exe`. To pass flags, append
+them after `-File '<path>'`, e.g. `... -File '<path>' -SkipVenv`.
 
 ## Restore on a new machine
 
