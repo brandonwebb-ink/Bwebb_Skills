@@ -1,0 +1,16 @@
+# Editor / OS junk
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+*.swp
+
+# Local PowerShell history that might land in a script folder by accident
+*.history.txt
+
+# Migration outputs - never commit a real snapshot to the repo
+migrations/
+*.snapshot/
+robocopy*.log
+restore*.log
+migration-manifest.json
